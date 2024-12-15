@@ -6,11 +6,14 @@ const env = process.env.NODE_ENV || 'development';
 const config = require('../config/config.js')[env];
 const db = {};
 
+// initialize sequelize
 const sequelize = new Sequelize(config.database, config.username, config.password, {
   host: config.host,
   dialect: config.dialect,
+  logging: console.log,
 });
 
+// load all model file
 fs.readdirSync(__dirname)
   .filter((file) => {
     return (
@@ -24,6 +27,7 @@ fs.readdirSync(__dirname)
     db[model.name] = model;
   });
 
+  // setup association
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {
     db[modelName].associate(db);

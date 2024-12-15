@@ -1,8 +1,12 @@
 const { Model, DataTypes } = require('sequelize');
-const sequelize = require('../config/config.js');
 
 module.exports = (sequelize) => {
-  class User extends Model {}
+  class User extends Model {
+    // define association
+    static associate(db) {
+      User.hasOne(db.VirtualAccount, { foreignKey: 'user_id', as: 'virtualAccount' });
+    }
+  }
   
   User.init(
     {
@@ -24,6 +28,10 @@ module.exports = (sequelize) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      country: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
     },
     {
       sequelize,
@@ -33,5 +41,3 @@ module.exports = (sequelize) => {
 
   return User;
 };
-
-// module.exports = User;
