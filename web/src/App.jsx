@@ -1,25 +1,27 @@
-import { useEffect } from 'react'
-import axios from 'axios';
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import Landing from "./pages/landing";
+import Home from "./pages/home";
+import Login from "./pages/login-page";
+import Register from "./pages/signup-page";
+import ValidateOtp from "./pages/validateOtp";
+import TransactionPage from './pages/transactionPage';
+import'./common.css';
 
 const App = () => {
-	useEffect(() => {
-		const fetchData = async () => {
-			try {
-					const response = await axios.get('http://localhost:5000/api/data');
-					console.log(response.data); // Should log: { message: 'Hello from API!' }
-				} catch (error) {
-					console.error('Error fetching data:', error);
-				}
-		};
+  return (
+	<div>
+	  <Routes>
+		<Route path="/" element={<Landing />} />
+		<Route path="home" element={<Home />} />
+		<Route path="register" element={<Register />} />
+		<Route path="login" element={<Login />} />
+		<Route path="validate-otp" element={<ValidateOtp />} />
+		<Route path="/transaction/:type" element={<TransactionPage />} />
+		<Route path="*" element={<h1>Page not found</h1>} />
+	  </Routes>
+	</div>
+  );
+}
 
-		    fetchData();
-		    }, []);
-
-	return (
-			<div>
-			<h1>React Frontend</h1>
-			<p>Check the console for the API response!</p>
-			</div>
-		);
-};
-export default App
+export default App;

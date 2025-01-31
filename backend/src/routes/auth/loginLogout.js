@@ -36,9 +36,14 @@ router.post('/login', async (req, res) => {
 });
 
 // Logout API
-router.post('/logout', (req, res) => {
-    // Since JWT is stateless, we recommend invalidating it on the client side
-    return res.status(200).json({ message: 'Logout successful' });
-});
-
+router.post('/logout', async (req, res) => {
+    try {
+      const userId = req.user.id; // Ensure `req.user` is set by middleware
+      await User.update({ lastLogoutAt: new Date() }, { where: { id: userId } });
+      res.status(200).json({ message: 'Logout successful' });
+    } catch (error) {
+      console.error(error);
+      res.status(500).send('Internal server error');
+    }
+  });
 module.exports = router;

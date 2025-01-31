@@ -1,0 +1,120 @@
+/* Form Wrapper */
+.form-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f7f7f7;
+}
+
+/* Form Container */
+.form-container {
+    width: 550px;
+    padding: 25px;
+    border-radius: 7px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+}
+
+/* heading */
+.heading {
+    font-size: 2rem;
+    text-decoration: capitalize;
+    color: #000;
+    text-align: center;
+    padding: 25px;
+    font-weight: 800;
+}
+
+/* Form Control */
+.form-control {
+    position: relative;
+    margin-bottom: 25px;
+    width: 100%;
+    border-bottom: 2px solid #000;
+}
+
+/* Label Styling */
+.label-control {
+    position: absolute;
+    left: 10px;
+    color: #888;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+/* Adjust label when input has value */
+.input-control:focus + .label-control,
+.input-control:not(:placeholder-shown) + .label-control {
+    transform: translateY(-25px);
+    font-size: 0.85rem;
+    color: #007BFF;
+}
+
+/* Input Styling */
+.input-control {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 5px;
+    outline: none;
+    background: transparent;
+}
+
+/* Error Message */
+.error {
+    color: red;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+/* Button Styling */
+.button {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #fff;
+    background-color: rgb(246, 72, 42);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.altenative{
+    text-align: center;
+    font-size: 0.9rem;
+    padding: 10px;
+}
+
+.otp-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+  
+.otp-box {
+    width: 50px;
+    height: 50px;
+    font-size: 18px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.otp-box:focus {
+border-color: #ff6347;
+box-shadow: 0 0 5px rgba(255, 99, 71, 0.5);
+}
+
+
+.success {
+color: green;
+font-size: 14px;
+margin-bottom: 10px;
+}
+  
