@@ -4,15 +4,18 @@ require('dotenv').config();
 
 // Middleware to authenticate the user
 const authenticateUser = async (req, res, next) => {
+  console.log("i got here");
+  
   try {
     
     const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
     if (!token) return res.status(401).send('Unauthorized');
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    const user = await User.findOne({ where: { id: decoded.id } });
-
+    console.log(decoded);
+    
+    const user = await User.findOne({ where: { email: decoded.email } });
+    
     if (!user) return res.status(401).send('Unauthorized');
     
     if (new Date(decoded.iat * 1000) < new Date(user.lastLogoutAt)) {

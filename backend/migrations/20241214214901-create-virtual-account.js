@@ -28,6 +28,16 @@ module.exports = {
         allowNull: false,
         defaultValue: 0.0,
       },
+      remit_profit: {
+        type: Sequelize.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.0,
+      },
+      main_balance: {
+        type: Sequelize.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.0,
+      },
       account_name: {
         type: Sequelize.STRING,
         allowNull: true,

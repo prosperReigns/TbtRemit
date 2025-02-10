@@ -15,7 +15,9 @@ async function verifyTransactionPin(req, res, next) {
 
   // Verify the transaction pin
   try {
-    const user = await User.findByPk(req.user.id);
+    const user = await User.findByPk(req.user.email);
+    console.log(user);
+    
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }

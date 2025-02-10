@@ -5,11 +5,10 @@ const bcrypt = require('bcryptjs');
 const { User } = require('../../../models');
 
 const router = express.Router();
-router.use(authenticateUser);
 router.use(getUserFromDb);
 
 //1. View Profile (GET)
-router.get('/profile', (req, res) => {
+router.get('/profile', authenticateUser, (req, res) => {
   return res.status(200).json({
     message: 'User profile fetched successfully',
     data: req.userData,
@@ -17,7 +16,7 @@ router.get('/profile', (req, res) => {
 });
 
 // 2. Update Profile (PATCH)
-router.patch('/change-password', async (req, res) => {
+router.patch('/change-password', authenticateUser, async (req, res) => {
   const { old_password, new_password } = req.body;
 
   if (!old_password || !new_password) {
@@ -47,9 +46,8 @@ router.patch('/change-password', async (req, res) => {
 });
 
 
-
 // 3x. Set Transaction Pin (POST)
-router.post('/set-transaction-pin', async (req, res) => {
+router.post('/set-transaction-pin', authenticateUser, async (req, res) => {
   const { transaction_pin } = req.body;
 
   // Validate if the transaction pin is provided
@@ -79,7 +77,7 @@ router.post('/set-transaction-pin', async (req, res) => {
 });
 
 
-router.patch('/update-transaction-pin', async (req, res) => {
+router.patch('/update-transaction-pin', authenticateUser, async (req, res) => {
   const { transaction_pin } = req.body;
 
   if (!transaction_pin) {

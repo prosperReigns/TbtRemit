@@ -2,21 +2,20 @@ const express = require('express');
 const { buyAirtime } = require('../../services/airtime');
 const authenticateUser = require('../../middleware/authenticator');
 const verifyTransactionPin = require('../../middleware/verifyTransactionPin');
-const { checkAndDeductBalance } = require('../../utility/balanceUtils');
+const  checkAndDeductBalance = require('../../utility/balanceUtils');
 const { logTransaction } = require('../../utility/transactionUtils');
 const { VirtualAccount, Transaction } = require('../../../models');
+const { networkMapping } = require('../../utility/mappingUtil');
 
 const router = express.Router();
 
-router.use(authenticateUser);
-router.use(verifyTransactionPin);
+// router.use(verifyTransactionPin);
 
-router.post('/buy-airtime', async (req, res) => {
+router.post('/buy-airtime', authenticateUser, verifyTransactionPin, async (req, res) => {
   const { network, amount, phone, transaction_pin } = req.body;
 
   const transaction = await VirtualAccount.sequelize.transaction();
   try {
-    // Validate inputs
     if (!network || !amount || !phone) {
       return res.status(400).json({ message: 'Network, amount, and phone number are required' });
     }
@@ -42,17 +41,23 @@ router.post('/buy-airtime', async (req, res) => {
     // Perform airtime purchase
     const airtimeResponse = await buyAirtime(network_id, amount, phone);
 
+    const senderAccount = await VirtualAccount.findOne({ where: { user_id: req.user.id } });
+
+    if (!senderAccount) {
+      return res.status(404).json({ message: 'Virtual account not found for this user' });
+    }
+
     // Log the transaction with complete details
     await logTransaction({
       user_id: req.user.id,
       transaction_type: 'airtime',
       amount,
       status: 'completed',
-      debit_virtual_account_id: req.user.virtualAccountId,
+      debit_virtual_account_id: senderAccount.id,
       details: {
         network_id,
         phone,
-        airtimeResponse, // Store the full airtime response for later review
+        airtimeResponse,
       },
     }, transaction);
 
@@ -62,11 +67,11 @@ router.post('/buy-airtime', async (req, res) => {
       transaction_type: 'airtime',
       amount,
       status: 'completed',
-      debit_virtual_account_id: req.user.virtualAccountId,
+      debit_virtual_account_id: senderAccount.id,
       details: {
         network_id,
         phone,
-        airtimeResponse, // Store the full airtime response for later review
+        airtimeResponse,
       },
       reversed: false,
       transaction,

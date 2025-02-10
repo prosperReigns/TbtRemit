@@ -25,3 +25,5 @@ const networkMapping = {
     BEDC: 10,
     YEDC: 11,
   };
+
+module.exports = { networkMapping, cablePlanMapping, electricityProviderMapping };

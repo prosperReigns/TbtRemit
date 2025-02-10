@@ -9,4 +9,5 @@ const checkRole = (roles) => {
       next();
     };
   };
-  
+
+module.exports = checkRole;

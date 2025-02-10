@@ -6,13 +6,11 @@ const authenticateUser = require('../../middleware/authenticator');
 const verifyTransactionPin = require('../../middleware/verifyTransactionPin');
 const { checkAndDeductBalance } = require('../../utility/balanceUtils');
 const { logTransaction } = require('../../utility/transactionUtils');
-const { VirtualAccount, Transaction } = require('../../../models');
+const { VirtualAccount, Transaction, Profit } = require('../../../models');
 
 const router = express.Router();
 
-router.use(authenticateUser);
-
-router.post('/bank-list', async (req, res) => {
+router.post('/bank-list', authenticateUser, async (req, res) => {
   const { bank_name } = req.body;
   const banks = await getBankList();
   
@@ -45,7 +43,7 @@ router.post('/bank-list', async (req, res) => {
   return res.status(404).json({ error: "No banks found with that name" });
 });
 
-router.post('/name-enquiry', async (req, res) => {
+router.post('/name-enquiry', authenticateUser, async (req, res) => {
   const { bankCode, accountNumber } = req.body;
 
   try {
@@ -66,131 +64,31 @@ router.post('/name-enquiry', async (req, res) => {
 });
 
 
-// router.post('/transfer', verifyTransactionPin, async (req, res) => {
-//   const { bankCode, accountNumber, amount, narration, transaction_pin, sessionId, saveBeneficiary = false } = req.body;
+router.post('/transfer', authenticateUser, verifyTransactionPin, async (req, res) => {
+  const { bankCode, accountNumber, amount, narration, sessionId, saveBeneficiary = false, transaction_pin } = req.body;
 
-  
-//   const transaction = await VirtualAccount.sequelize.transaction();
-//   try {
-//     // Deduct balance and get the new balance (sender's account)
-//     const newBalance = await checkAndDeductBalance(req.user.id, amount, transaction);
-
-//     const virtualAccount = await VirtualAccount.findOne({ where: { user_id: req.user.id } });
-//     if (!virtualAccount) {
-//       return res.status(404).send('Virtual account not found for user');
-//     }
-
-//     // console.log('req.user:', req.user);
-//     console.log('User Account Number:', virtualAccount.account_number);
-//     console.log(`...${sessionId}...${req.user.account_number}...${bankCode}...${accountNumber}...${amount}...${narration}...${saveBeneficiary}`);
-    
-
-//     // Perform the transfer
-//     const transferResponse = await transferFunds({
-//       nameEnquiryReference: sessionId,
-//       debitAccountNumber: virtualAccount.account_number,
-//       beneficiaryBankCode: bankCode,
-//       beneficiaryAccountNumber: accountNumber,
-//       amount,
-//       narration,
-//       saveBeneficiary
-//     });
-
-//     console.log('Transfer Response:', transferResponse);
-//     // Check transfer status (assuming transferResponse has status)
-//     if (transferResponse.data.status !== 'Completed') {
-//       throw new Error('Transfer failed');
-//     }
-
-//     // Update receiver's balance
-//     const beneficiaryAccount = await VirtualAccount.findOne({
-//       where: { account_number: accountNumber },
-//       transaction,
-//     });
-
-//     if (beneficiaryAccount) {
-//       // Add the amount to the receiver's balance
-//       beneficiaryAccount.balance += amount;
-//       await beneficiaryAccount.save({ transaction });
-//     } else {
-//       throw new Error('Receiver account not found');
-//     }
-
-//     // Log the transaction with the detailed response data
-//     await logTransaction({
-//       user_id: req.user.id,
-//       transaction_type: 'transfer',
-//       amount,
-//       status: 'completed',
-//       debit_virtual_account_id: virtualAccount.id,
-//       details: {
-//         sessionId: transferResponse.data.sessionId,
-//         nameEnquiryReference: transferResponse.data.nameEnquiryReference,
-//         paymentReference: transferResponse.data.paymentReference || '',
-//         creditAccountName: transferResponse.data.creditAccountName,
-//         creditAccountNumber: transferResponse.data.creditAccountNumber,
-//         debitAccountName: transferResponse.data.debitAccountName,
-//         debitAccountNumber: transferResponse.data.debitAccountNumber,
-//         transactionLocation: transferResponse.data.transactionLocation,
-//         fees: transferResponse.data.fees,
-//         vat: transferResponse.data.vat,
-//         stampDuty: transferResponse.data.stampDuty,
-//       },
-//     }, transaction);
-
-//     // Save the transaction to the Transaction table with complete details
-//     const newTransaction = await Transaction.create({
-//       user_id: req.user.id,
-//       transaction_type: 'transfer',
-//       amount,
-//       status: 'completed',
-//       debit_virtual_account_id:  virtualAccount.id,
-//       details: {
-//         sessionId: transferResponse.data.sessionId,
-//         nameEnquiryReference: transferResponse.data.nameEnquiryReference,
-//         paymentReference: transferResponse.data.paymentReference || '',
-//         creditAccountName: transferResponse.data.creditAccountName,
-//         creditAccountNumber: transferResponse.data.creditAccountNumber,
-//         debitAccountName: transferResponse.data.debitAccountName,
-//         debitAccountNumber: transferResponse.data.debitAccountNumber,
-//         transactionLocation: transferResponse.data.transactionLocation,
-//         fees: transferResponse.data.fees,
-//         vat: transferResponse.data.vat,
-//         stampDuty: transferResponse.data.stampDuty,
-//       },
-//       reversed: false,
-//       transaction,
-//     });
-
-//     // Commit the transaction
-//     await transaction.commit();
-
-//     res.status(200).json({
-//       message: 'Transfer completed successfully',
-//       newBalance,
-//       transactionId: newTransaction.id,
-//     });
-//   } catch (err) {
-//     if (transaction) await transaction.rollback();
-//     res.status(500).json({ message: 'Error completing transfer', error: err.message });
-//   }
-// });
-
-
-router.post('/transfer', verifyTransactionPin, async (req, res) => {
-  const { bankCode, accountNumber, amount, narration, sessionId, saveBeneficiary = false } = req.body;
+  const profit = 10; // Fixed ₦10 profit per transaction
+  console.log(Profit);
 
   // Start a transaction
   const transaction = await VirtualAccount.sequelize.transaction();
   try {
-    // Retrieve the sender's virtual account (assumes user authentication is in place)
-    const senderAccount = await VirtualAccount.findOne({ 
+    // Retrieve and lock sender's virtual account for update
+    const senderAccount = await VirtualAccount.findOne({
       where: { user_id: req.user.id },
-      transaction 
+      lock: transaction.LOCK.UPDATE, // Prevent race conditions
+      transaction
     });
 
+    if (!senderAccount) {
+      throw new Error('Sender account not found');
+    }
+
+    // Calculate total deduction (amount + profit)
+    const totalDeduction = parseFloat(amount) + profit;
+
     // Check for sufficient balance
-    if (senderAccount.balance < amount) {
+    if (parseFloat(senderAccount.balance) < totalDeduction) {
       throw new Error('Insufficient balance');
     }
 
@@ -204,32 +102,49 @@ router.post('/transfer', verifyTransactionPin, async (req, res) => {
       narration,
       saveBeneficiary,
     });
+
+    console.log(transferResponse);
     
-    // Ensure the transfer was successful
     if (transferResponse.data.status !== 'Completed') {
       throw new Error('Transfer failed');
     }
 
-    // Deduct sender's balance
-    senderAccount.balance = (parseFloat(senderAccount.balance) - parseFloat(amount)).toFixed(2);
-    await senderAccount.save({ transaction });
+    // Deduct sender's balance (only amount + profit)
+    const newSenderBalance = parseFloat(senderAccount.balance) - totalDeduction;
+    const newSenderMainBalance = newSenderBalance; // main_balance reflects full deduction
 
-    // Update receiver's balance
-    const receiverAccount = await VirtualAccount.findOne({ 
+    await senderAccount.update(
+      { 
+        balance: newSenderBalance.toFixed(2), 
+        main_balance: newSenderMainBalance.toFixed(2) 
+      },
+      { transaction }
+    );
+
+    // Retrieve receiver's account **without locking**
+    const receiverAccount = await VirtualAccount.findOne({
       where: { account_number: accountNumber },
-      transaction 
+      transaction
     });
 
     if (!receiverAccount) {
       throw new Error('Receiver account not found');
     }
-    
-    // Add the transferred amount to the receiver's balance
-    receiverAccount.balance = (parseFloat(receiverAccount.balance) + parseFloat(amount)).toFixed(2);
-    await receiverAccount.save({ transaction });
 
-    // Log the transaction
-    await logTransaction(
+    // Add only the transferred amount to the receiver's balance
+    const newReceiverBalance = parseFloat(receiverAccount.balance) + parseFloat(amount);
+    const newReceiverMainBalance = newReceiverBalance;
+
+    await receiverAccount.update(
+      { 
+        balance: newReceiverBalance.toFixed(2), 
+        main_balance: newReceiverMainBalance.toFixed(2) 
+      },
+      { transaction }
+    );
+
+    // Save the transaction record
+    await Transaction.create(
       {
         user_id: req.user.id,
         transaction_type: 'transfer',
@@ -248,10 +163,29 @@ router.post('/transfer', verifyTransactionPin, async (req, res) => {
           fees: transferResponse.data.fees,
           vat: transferResponse.data.vat,
           stampDuty: transferResponse.data.stampDuty,
+          profit
         },
+        reversed: false
       },
-      transaction
+      { transaction }
     );
+
+    const [profitRecord, created] = await Profit.findOrCreate({
+      where: { user_id: req.user.id },
+      defaults: { balance: profit }
+    });
+    
+    if (!created) {
+      await profitRecord.increment('balance', { by: profit });
+    }
+    
+
+    // Update remit_profit with the added profit in VirtualAccounts table
+  await VirtualAccount.increment('remit_profit', {
+    by: profit,
+    where: { user_id: req.user.id },
+    transaction
+  });
 
     // Commit the transaction
     await transaction.commit();
@@ -259,7 +193,8 @@ router.post('/transfer', verifyTransactionPin, async (req, res) => {
     // Respond with success
     res.status(200).json({
       message: 'Transfer completed successfully',
-      newBalance: senderAccount.balance,
+      newBalance: newSenderBalance.toFixed(2),
+      main_balance: newSenderMainBalance.toFixed(2) // Returning updated main_balance
     });
   } catch (err) {
     // Rollback transaction if an error occurs

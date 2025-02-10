@@ -11,6 +11,8 @@ const transferFunds = async ({
   saveBeneficiary
 }) => {
 
+  console.log(`${nameEnquiryReference}, ${debitAccountNumber}, ${beneficiaryBankCode}, ${beneficiaryAccountNumber}, ${amount}, ${narration}, ${saveBeneficiary}`);
+
   const options = {
     method: 'POST',
     url: `${process.env.API_BASE_URL}/transfers`,

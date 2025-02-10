@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const { User } = require('../../../models');
+const { User, VirtualAccount } = require('../../../models');
 
 const router = express.Router();
 
@@ -25,6 +25,42 @@ router.post('/login', async (req, res) => {
         if (!isMatch) {
             return res.status(400).json({ message: 'Invalid email or password' });
         }
+
+          // Check if the user is an admin
+      if (user.role === 'admin') {
+        // Admin-specific logic
+        const token = jwt.sign(
+            { id: user.id, email: user.email, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        // Check if the virtual account is set up
+        const virtualAccount = await VirtualAccount.findOne({ where: { user_id: user.id } });
+
+        if (!virtualAccount) {
+            return res.status(200).json({
+                message: 'Admin login successful, but virtual account setup is required.',
+                requiresVirtualAccountSetup: true,
+                token,
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                },
+            });
+        }
+
+        return res.status(200).json({
+            message: 'Admin login successful',
+            token,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+            },
+        });
+    }
 
         // Generate a JWT token
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });

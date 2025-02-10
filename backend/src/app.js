@@ -4,6 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const routes = require('./routes');
 const makeApiCall = require('./services/tokenService');
+const scheduleMonthlyPayouts = require('../src/services/processProfitPayout');
 
 const app = express();
 

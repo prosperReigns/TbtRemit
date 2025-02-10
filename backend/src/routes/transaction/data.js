@@ -4,89 +4,113 @@ const authenticateUser = require('../../middleware/authenticator');
 const verifyTransactionPin = require('../../middleware/verifyTransactionPin');
 const { checkAndDeductBalance } = require('../../utility/balanceUtils');
 const { logTransaction } = require('../../utility/transactionUtils');
-const { VirtualAccount, Transaction } = require('../../../models');
+const { VirtualAccount, Transaction, Profit, DataPlan } = require('../../../models');
+const { networkMapping } = require('../../utility/mappingUtil');
 
 const router = express.Router();
 
-router.use(authenticateUser);
-router.use(verifyTransactionPin);
 
-router.post('/buy-data', async (req, res) => {
-  const { network, plan_id, amount, transaction_pin } = req.body;
+router.post('/buy-data', authenticateUser, verifyTransactionPin, async (req, res) => {
+  const { network, phoneNumber, amount, size, validity, transaction_pin } = req.body;
 
+  if (!network || !phoneNumber || !amount || !size || !validity) {
+      return res.status(400).json({ message: 'Network, phone number, amount, size, and validity are required' });
+  }
+
+  // Fetch the matching data plan
+  const dataPlan = await DataPlan.findOne({
+      where: { network, amount, size, validity }
+  });
+
+  if (!dataPlan) {
+      return res.status(400).json({ message: 'No matching data plan found' });
+  }
+
+  const plan_id = dataPlan.data_id;
+  const actualPrice = dataPlan.amount;
+  const sellingPrice = dataPlan.sellling_price;
+  const profit = sellingPrice - actualPrice;
+
+  const network_id = networkMapping[network.toUpperCase()];
+
+  // Start a transaction
   const transaction = await VirtualAccount.sequelize.transaction();
   try {
-    // Validate inputs
-    if (!network || !plan_id || !amount) {
-      return res.status(400).json({ message: 'Network, plan ID, and amount are required' });
-    }
+      // Lock user account for update to prevent race conditions
+      const userAccount = await VirtualAccount.findOne({
+          where: { user_id: req.user.id },
+          lock: transaction.LOCK.UPDATE,
+          transaction
+      });
 
-    if (amount <= 0) {
-      return res.status(400).json({ message: 'Amount must be greater than zero' });
-    }
+      if (!userAccount) {
+          throw new Error('User account not found');
+      }
 
-    // Convert network name to network ID
-    const network_id = networkMapping[network.toUpperCase()];
-    if (!network_id) {
-      return res.status(400).json({ message: 'Invalid network name provided' });
-    }
+      // Check for sufficient balance
+      if (parseFloat(userAccount.balance) < actualPrice) {
+          throw new Error('Insufficient balance for data purchase');
+      }
 
-    // Check if balance is sufficient
-    const balance = await VirtualAccount.findOne({ where: { user_id: req.user.id } });
-    if (!balance || balance.balance < amount) {
-      return res.status(400).json({ message: 'Insufficient balance for data purchase' });
-    }
+      // Make API call to buy data
+      const dataResponse = await buyData(network_id, plan_id, phoneNumber);
+      if (!dataResponse || dataResponse.status !== 'success') {
+          throw new Error('Data purchase failed');
+      }
 
-    // Deduct balance and get the new balance (user's account)
-    const newBalance = await checkAndDeductBalance(req.user.id, amount, transaction);
+      // Deduct balance and update remit_profit atomically
+      const newBalance = parseFloat(userAccount.balance) - actualPrice;
+      const newMainBalance = newBalance;
 
-    // Perform data purchase
-    const dataResponse = await buyData(network_id, plan_id);
+      await userAccount.update(
+          {
+              balance: newBalance.toFixed(2),
+              main_balance: newMainBalance.toFixed(2),
+              remit_profit: VirtualAccount.sequelize.literal(`remit_profit + ${profit}`)
+          },
+          { transaction }
+      );
 
-    // Log the transaction with complete details
-    await logTransaction({
-      user_id: req.user.id,
-      transaction_type: 'data',
-      amount,
-      status: 'completed',
-      debit_virtual_account_id: req.user.virtualAccountId,
-      details: {
-        network_id,
-        plan_id,
-        dataResponse, // Store the full response for later review
-      },
-    }, transaction);
+      // Ensure profit record exists and update balance
+      const [profitRecord, created] = await Profit.findOrCreate({
+          where: { user_id: req.user.id },
+          defaults: { balance: profit },
+          transaction
+      });
 
-    // Save the transaction details in the Transaction table
-    const newTransaction = await Transaction.create({
-      user_id: req.user.id,
-      transaction_type: 'data',
-      amount,
-      status: 'completed',
-      debit_virtual_account_id: req.user.virtualAccountId,
-      details: {
-        network_id,
-        plan_id,
-        dataResponse, // Store the full response for later review
-      },
-      reversed: false,
-      transaction,
-    });
+      if (!created) {
+          await profitRecord.increment('balance', { by: profit, transaction });
+      }
 
-    // Commit the transaction
-    await transaction.commit();
+      // Log the transaction
+      const newTransaction = await Transaction.create({
+          user_id: req.user.id,
+          transaction_type: 'data',
+          amount: actualPrice,
+          status: 'completed',
+          debit_virtual_account_id: userAccount.id,
+          details: { network, plan_id, dataResponse },
+          reversed: false
+      }, { transaction });
 
-    res.status(200).json({
-      message: 'Data purchased successfully',
-      newBalance,
-      data: dataResponse,
-      transactionId: newTransaction.id, // Optionally include the transaction ID in the response
-    });
+      // Commit the transaction
+      await transaction.commit();
+
+      res.status(200).json({
+          message: 'Data purchased successfully',
+          newBalance: newBalance.toFixed(2),
+          main_balance: newMainBalance.toFixed(2),
+          transactionId: newTransaction.id,
+          data: dataResponse
+      });
+
   } catch (err) {
-    if (transaction) await transaction.rollback();
-    res.status(500).json({ message: 'Error buying data', error: err.message });
+      if (transaction) await transaction.rollback();
+      res.status(500).json({ message: 'Error buying data', error: err.message });
   }
 });
+
+
 
 // Route to get all data purchases
 router.get('/get-all-data-purchase', async (req, res) => {

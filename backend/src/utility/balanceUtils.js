@@ -1,37 +1,23 @@
-const { VirtualAccount } = require('../../models'); // Assuming your VirtualAccount model is here
+const { CablePlan } = require('../../models');
 
 /**
- * Check if the user has enough balance and deduct the specified amount.
- * @param {number} userId - The user's ID.
- * @param {number} amount - The amount to deduct.
- * @returns {Promise<number>} The new balance after deduction.
- * @throws Will throw an error if there are insufficient funds.
+ * Retrieve cable plan details including cablePlan_id and cableName_id
+ * @param {string} cablename - The name of the cable provider
+ * @param {string} cableplan - The specific cable plan
+ * @returns {Promise<object|null>} - Returns an object with cablePlan_id and cableName_id or null if not found
  */
-const checkAndDeductBalance = async (userId, amount, transaction) => {
-  const virtualAccount = await VirtualAccount.findOne({
-    where: { user_id: userId },
-    attributes: ['id', 'balance'], // Only fetch required fields
-    transaction, // Use the transaction to ensure atomicity
+const getCablePlanDetails = async (cablename, cableplan) => {
+  const plan = await CablePlan.findOne({
+    where: { name: cableplan },
+    attributes: ['id', 'cableName_id'],
   });
 
-  if (!virtualAccount) {
-    throw new Error('No virtual account found for this user');
-  }
+  if (!plan) return null;
 
-  const { id: virtualAccountId, balance } = virtualAccount;
-
-  if (balance < amount) {
-    throw new Error('Insufficient funds');
-  }
-
-  // Deduct balance
-  const newBalance = balance - amount;
-  await VirtualAccount.update(
-    { balance: newBalance },
-    { where: { id: virtualAccountId }, transaction }
-  );
-
-  return newBalance;
+  return {
+    cablePlan_id: plan.id,
+    cableName_id: plan.cableName_id,
+  };
 };
 
-module.exports = { checkAndDeductBalance };
+module.exports = getCablePlanDetails;

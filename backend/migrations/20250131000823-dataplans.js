@@ -4,8 +4,8 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('dataPlan', {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
         allowNull: false,
         primaryKey: true,
       },
@@ -34,6 +34,12 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
       },
+      selling_price: {
+        type: Sequelize.DECIMAL(10, 2),
+        allowNull: false,
+      },
+    },{
+      timestamps: false
     });
   },
 

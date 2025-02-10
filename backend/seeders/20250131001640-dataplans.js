@@ -18,6 +18,7 @@ module.exports = {
             amount: parseFloat(data.amount),
             size: data.size,
             validity: data.validity,
+            selling_price: data.selling_price,
           });
         })
         .on('end', async () => {

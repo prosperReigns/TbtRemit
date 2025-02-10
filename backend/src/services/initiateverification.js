@@ -1,7 +1,7 @@
 const axios =  require('axios');
 require('dotenv').config();
 
-const initiateVerification = async (bvn) => {
+const initiateVerification = async ({bvn}) => {
     const requestConfig = {
       method: 'POST',
       url: `${process.env.API_BASE_URL}/identity/v2`,

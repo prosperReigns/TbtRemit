@@ -1,35 +1,35 @@
-cablePlan_id,name,amount
-2,GOtv Max,7200
-6,DStv Yanga,5100
-7,DStv Compact,15700
-8,DStv Compact Plus,25000
-9,DStv Premium,37000
-11,Classic -5000 Naira - 1 Month,5000
-13,Smart - 3800 Naira - 1 Month,3800
-14,Nova - 1700 Naira - 1 Month,1700
-15,Super - 8200 Naira - 1 Month,8200
-16,GOtv Jinja,3300
-17,GOtv Jolli,4850
-19,DStv Confam,9300
-20,DStv Padi,3600
-21,DStv Great Wall Standalone,2500
-24,DStv Premium French,57500
-25,DStv Premium Asia,42000
-26,DStv Confam + ExtraView,14300
-27,DStv Yanga + ExtraView,10100
-28,DStv Padi + ExtraView,8600
-29,DStv Compact + Extra View,20700
-30,DStv Premium + Extra View,42000
-31,DStv Compact Plus - Extra View,30000
-33,ExtraView Access,5000
-34,GOtv Smallie - Monthly,1575
-35,GOtv Smallie - Quarterly,4175
-36,GOtv Smallie - Yearly,12300
-37,Nova - 500 Naira - 1 Week,500
-38,Basic - 1100 Naira - 1 Week,1100
-39,Smart - 1500 Naira - 1 Week,1500
-40,Classic - 1700 Naira - 1 Week,1700
-41,Super - 2500 Naira - 1 Week,2800
-47,GOtv Supa - monthly,9600
-48,Supa plus - 15700 Naira - 1 Month,15700
-49,Basic - 3300 Naira - 1 Month,3300
+cablePlan_id,cableName_id,name,amount,selling_price
+2,1,GOtv Max,7200,7500
+6,2,DStv Yanga,5100,5400
+7,2,DStv Compact,15700,16500
+8,2,DStv Compact Plus,25000,26500
+9,2,DStv Premium,37000,39000
+11,3,Classic -5000 Naira - 1 Month,5000,5500
+13,3,Smart - 3800 Naira - 1 Month,3800,4000
+14,3,Nova - 1700 Naira - 1 Month,1700,1800
+15,3,Super - 8200 Naira - 1 Month,8200,8500
+16,1,GOtv Jinja,3300,3500
+17,1,GOtv Jolli,4850,5000
+19,2,DStv Confam,9300,9800
+20,2,DStv Padi,3600,3800
+21,2,DStv Great Wall Standalone,2500,2700
+24,2,DStv Premium French,57500,60000
+25,2,DStv Premium Asia,42000,45000
+26,2,DStv Confam + ExtraView,14300,15000
+27,2,DStv Yanga + ExtraView,10100,10500
+28,2,DStv Padi + ExtraView,8600,9000
+29,2,DStv Compact + Extra View,20700,22000
+30,2,DStv Premium + Extra View,42000,45000
+31,2,DStv Compact Plus - Extra View,30000,32000
+33,2,ExtraView Access,5000,5500
+34,1,GOtv Smallie - Monthly,1575,1700
+35,1,GOtv Smallie - Quarterly,4175,4500
+36,1,GOtv Smallie - Yearly,12300,13000
+37,3,Nova - 500 Naira - 1 Week,500,550
+38,3,Basic - 1100 Naira - 1 Week,1100,1200
+39,3,Smart - 1500 Naira - 1 Week,1500,1600
+40,3,Classic - 1700 Naira - 1 Week,1700,1800
+41,3,Super - 2500 Naira - 1 Week,2800,3000
+47,1,GOtv Supa - monthly,9600,10000
+48,3,Supa plus - 15700 Naira - 1 Month,15700,16500
+49,3,Basic - 3300 Naira - 1 Month,3300,3500

@@ -2,10 +2,10 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Buy Data (POST request)
-const buyData = async (network_id, plan_id) => {
+const buyData = async (network_id, plan_id, phoneNumber) => {
   const data = {
     network: network_id,
-    mobile_number: "09095263835", // Example phone number
+    mobile_number: phoneNumber, // Example phone number
     plan: plan_id,
     Ported_number: true
   };

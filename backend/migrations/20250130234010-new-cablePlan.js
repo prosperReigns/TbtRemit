@@ -12,7 +12,10 @@ module.exports = {
             cablePlan_id: {
                 type: Sequelize.INTEGER,
                 allowNull: false,
-                unique: true,
+            },
+            cableName_id: {
+                type: Sequelize.INTEGER,
+                allowNull: false,
             },
             name: {
                 type: Sequelize.STRING,
@@ -20,6 +23,10 @@ module.exports = {
                 unique: true,
             },
             amount: {
+                type: Sequelize.DECIMAL(10, 2),
+                allowNull: false,
+            },
+            selling_price: {
                 type: Sequelize.DECIMAL(10, 2),
                 allowNull: false,
             },

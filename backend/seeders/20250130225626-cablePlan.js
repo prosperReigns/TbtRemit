@@ -13,8 +13,10 @@ module.exports = {
           results.push({
             id: require('crypto').randomUUID(),  // Generate UUID for the `id` field
             cablePlan_id: parseInt(data.cablePlan_id, 10),
+            cableName_id: parseInt(data.cableName_id, 10),
             name: data.name,
             amount: parseFloat(data.amount),
+            selling_price: parseFloat(data.selling_price),
           });
         })
         .on('end', async () => {

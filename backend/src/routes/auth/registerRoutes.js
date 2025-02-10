@@ -1,18 +1,20 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto'); // For generating unique token
+const crypto = require('crypto');
 const { User } = require('../../../models');
 const { VirtualAccount } = require('../../../models');
 const virtualAccount = require('../../services/subAccount');
 const initiateVerification = require('../../services/initiateverification');
 const validateIdentity = require('../../services/validateidentity');
 const externalReferenceNumber = require('../../utility/externalRef');
+const { setAsync, getAsync, delAsync } = require('../../utility/redis');
 
 const router = express.Router();
 
-const tempStorage = {}; 
-
-// Register API
+/**
+ * @route   POST /register
+ * @desc    Initiate user registration by storing data in Redis and returning a token
+ */
 router.post('/register', async (req, res) => {
     const { name, email, password, bvn, phoneNumber } = req.body;
 
@@ -21,53 +23,67 @@ router.post('/register', async (req, res) => {
     }
 
     try {
-        const initiateResponse = await initiateVerification(bvn);
-        console.log('Initiate Response:', initiateResponse);
-        
+        const initiateResponse = await initiateVerification({bvn});
 
         const identityId = initiateResponse.data._id;
-
-        // Generate a unique token for tracking the registration process
         const token = crypto.randomBytes(16).toString('hex');
 
-        // Store token and associated data in temporary storage
-        tempStorage[token] = { identityId, name, email, password, phoneNumber, bvn };
+        await setAsync(
+            `register:${token}`,
+            JSON.stringify({ identityId, name, email, password, phoneNumber, bvn }),
+            600
+        );
 
-        return res.status(200).json({
-            message: 'Verification initiated successfully. Please provide the OTP.',
-            token, // Send token to the frontend
+        return res.status(200).json({ 
+            message: 'Verification initiated successfully.', 
+            token 
         });
+
     } catch (error) {
-        console.error('Error in register route:', error);
+        console.error('Error in /register route:', error);
         return res.status(400).json({ error: error.message });
     }
 });
 
+
+/**
+ * @route   POST /validate-otp
+ * @desc    Validate OTP and complete user registration
+ */
 router.post('/validate-otp', async (req, res) => {
     const { otp } = req.body;
-    const token = req.headers['x-registration-token']; // Retrieve token from headers
+    const token = req.headers['x-registration-token'];
 
     try {
-        // Ensure the token exists in temporary storage
-        if (!tempStorage[token]) {
-            return res.status(404).json({ error: 'Invalid or expired registration token. Please restart the process.' });
+        let storedData = await getAsync(`register:${token}`);
+        let isAdmin = false;
+
+        if (!storedData) {
+            storedData = await getAsync(`update-admin:${token}`);
+            if (!storedData) {
+                return res.status(400).json({ message: 'Invalid or expired token' });
+            }
+            isAdmin = true;
         }
 
-        const { identityId, name, email, password, phoneNumber, bvn } = tempStorage[token];
+        // Parse stored data
+        const { identityId, name, email, password, phoneNumber, bvn } = JSON.parse(storedData);
 
-        // Validate identity using OTP
+        // Validate OTP
+        // const isOtpValid = await verifyOtp(phoneNumber, otp);
+        // if (!isOtpValid) {
+        //     return res.status(400).json({ message: 'Invalid OTP' });
+        // }
+
+        // Validate user identity
         const validateResponse = await validateIdentity({ identityId, otp });
+        // if (!validateResponse?.data?._id) {
+        //     return res.status(400).json({ message: 'Identity validation failed' });
+        // }
 
-        // Hash the password
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const externalRef = externalReferenceNumber();
 
-        // Create a new user in the database
-        const user = await User.create({ name, email, password: hashedPassword, bvn, phoneNumber });
-
-        externalRef = externalReferenceNumber();
-        //console.log(externalRef);
-
-        // Create a virtual account
+        // Create virtual account
         const subAccountResponse = await virtualAccount({
             identityId: validateResponse.data._id,
             bvn,
@@ -76,7 +92,6 @@ router.post('/validate-otp', async (req, res) => {
             phoneNumber,
             externalRef,
         });
-        //console.log('SubAccount Response:', subAccountResponse);
 
         const {
             accountNumber,
@@ -97,8 +112,25 @@ router.post('/validate-otp', async (req, res) => {
 
         const accountId = subAccountResponse.data._id;
 
+        // If NOT an admin, create user object
+        let user = null;
+        if (!isAdmin) {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            user = await User.create({
+                name,
+                email,
+                password: hashedPassword,
+                bvn,
+                phoneNumber,
+            });
+        } else {
+            // Admin already exists, retrieve admin object if needed
+            user = await User.findOne({ email }); // Assuming an Admin model exists
+        }
+
+        // Store Virtual Account
         await VirtualAccount.create({
-            user_id: user.id,
+            user_id: user ? user.id : null, // Admins won't have a user object
             account_number: accountNumber,
             account_name: accountName,
             account_type: accountType,
@@ -116,20 +148,17 @@ router.post('/validate-otp', async (req, res) => {
             account_id: accountId,
         });
 
-        // Remove temporary storage for token
-        delete tempStorage[token];
+        // Cleanup Redis
+        await delAsync(`register:${token}`);
+        await delAsync(`update-admin:${token}`);
 
         return res.status(201).json({
-            message: 'User registered successfully',
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-            },
+            message: isAdmin ? 'Admin identity validated and virtual account created' : 'User registered successfully',
+            user: user ? { id: user.id, name: user.name, email: user.email } : null,
         });
     } catch (error) {
         console.error('Error in validate-otp route:', error);
-        return res.status(400).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 });
 

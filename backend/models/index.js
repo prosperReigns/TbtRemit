@@ -23,8 +23,11 @@ fs.readdirSync(__dirname)
     );
   })
   .forEach((file) => {
-    const model = require(path.join(__dirname, file))(sequelize); // Pass sequelize
-    db[model.name] = model;
+    // const model = require(path.join(__dirname, file))(sequelize); // Pass sequelize
+    // db[model.name] = model;
+    const model = require(path.join(__dirname, file))(sequelize, Sequelize);
+    db[model.name.charAt(0).toUpperCase() + model.name.slice(1)] = model; // Capitalize first letter
+
   });
 
   // setup association
